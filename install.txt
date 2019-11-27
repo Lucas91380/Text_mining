@@ -1,0 +1,31 @@
+
+1. Installer impérativemnt Python 3.7.x, de préférence Anaconda ou Miniconda
+
+Anaconda, Python 3.7
+https://www.anaconda.com/distribution/#download-section
+
+ou Miniconda, Python 3.7
+
+https://docs.conda.io/en/latest/miniconda.html
+
+Les instructions pour installer les modules nécessaires pour le TP supposent que vous avez installé Anaconda ou Miniconda.
+
+
+2. Installer keras version 2.2.4:
+	conda install keras=2.2.4
+
+3. Installer tensorflow version 1.14.0 si pas installé automatiquement avec keras:
+	conda install tensorflow=1.14.0
+	
+4. Installer  gensim version 3.8.0:
+	conda install gensim=3.8.0
+	
+5. Installer spaCy version 2.1.8:
+	conda install -c conda-forge spacy=2.1.8
+
+6. Installer les modèles spaCy pour le français et pour l'anglais: attention, il faut s'assurer que la commande 'python' ci-dessous correspond au python 3.7.x installé avec anaconda/miniconda dans les étapes précédentes:
+	python -m spacy download en
+	python -m spacy download fr
+
+
+
