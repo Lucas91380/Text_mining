@@ -116,7 +116,7 @@ label_binarizer.fit(train_labels)
 word2idx, emb_weights, emb_dim, padid, oovid = load_embs()
 
 # create model
-input_size = len(vectorizer.vocabulary_) + emb_dim
+input_size = len(vectorizer.vocabulary_) #+ emb_dim
 output_size = len(label_binarizer.classes_)
 model = create_model(input_size, output_size)
 
@@ -132,7 +132,8 @@ def vectorize(texts):
         text_vector = np.mean(token_vectors, axis=0)
         X_v2[i] = text_vector
     # return X_v2
-    return np.concatenate([X_v1, X_v2], axis=1)
+    #return np.concatenate([X_v1, X_v2], axis=1)
+    return X_v1
 
 
 
