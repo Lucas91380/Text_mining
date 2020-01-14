@@ -1,0 +1,2 @@
+https://openclassrooms.com/fr/courses/4470541-analysez-vos-donnees-textuelles
+https://realpython.com/python-keras-text-classification/
