@@ -1,18 +1,25 @@
+
 import numpy as np
 np.random.seed(15)
 
-import spacy
-from datatools import load_dataset
-from sklearn.preprocessing import LabelBinarizer
-from sklearn.feature_extraction.text import CountVectorizer
-from keras import layers
-from keras.models import Sequential
+from keras.layers import Input, Dense, Dropout
+from keras.models import Model
+from keras import optimizers
 from keras.callbacks import EarlyStopping
+
+from sklearn.preprocessing import LabelBinarizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+from nltk import word_tokenize
+
+import spacy
+from gensim.models import KeyedVectors as kv
+
+from datatools import load_dataset
 
 
 nlp = spacy.load('fr')
 
-#embfile = "../resources/frWac_non_lem_no_postag_no_phrase_200_skip_cut100.bin"
+embfile = "../resources/frWac_non_lem_no_postag_no_phrase_200_skip_cut100.bin"
 # wv : kv = kv.load_word2vec_format(embfile, binary=True, encoding='UTF-8', unicode_errors='ignore')
 
 
@@ -23,7 +30,7 @@ class Classifier:
         self.labelset = None
         self.label_binarizer = LabelBinarizer()
         self.model = None
-        self.epochs = 25
+        self.epochs = 200
         self.batchsize = 16
         self.max_features = 8000
         # create the vectorizer
@@ -55,27 +62,26 @@ class Classifier:
         Here you can modify the architecture of the model (network type, number of layers, number of neurones)
         and its parameters"""
 
-        #Définition du nombre de neurones dans la couche d'entrée du réseau de neuronnes
-        input_dim = self.feature_count() #Nombres de mots distincts en tout
-
-        #Définition du modèle
-        model = Sequential()
-        model.add(layers.Dense(units=10, input_dim=input_dim, activation='relu')) #Ajout d'une couche
-        model.add(layers.Dense(units=3, activation='sigmoid'))
-
-        #Configuration du processus d'apprentissage
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
-
-        #Summary de notre modèle (avant de l'entraîner)
+        # Define input vector, its size = number of features of the input representation
+        input = Input((self.feature_count(),))
+        # Define output: its size is the number of distinct (class) labels (class probabilities from the softmax)
+        layer = input
+        # layer = Dense(10, activation='relu')(layer)
+        # layer = Dropout(.7)(layer)
+        output = Dense(len(self.labelset), activation='softmax')(layer)
+        # create model by defining the input and output layers
+        model = Model(inputs=input, outputs=output)
+        # compile model (pre
+        model.compile(optimizer=optimizers.Adam(),
+                      loss='categorical_crossentropy',
+                      metrics=['accuracy'])
         model.summary()
-
         return model
 
 
 
-
     def vectorize(self, texts):
-        return self.vectorizer.transform(texts)
+        return self.vectorizer.transform(texts).toarray()
 
 
     def train_on_data(self, texts, labels, valtexts=None, vallabels=None):
@@ -102,8 +108,6 @@ class Classifier:
         else:
             valdata = None
         # Train the model!
-
-
         self.model.fit(
             X_train, Y_train,
             epochs=self.epochs,
