@@ -1,8 +1,12 @@
-#### Importation ----------------------------------------------- ####
-
-#### Exam
+import spacy
 from datatools import load_dataset
+from keras import layers
+from keras.models import Sequential
+from keras.callbacks import EarlyStopping
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from sklearn.preprocessing import LabelBinarizer
+
+#### Importation ----------------------------------------------- ####
 
 #Chemin des données
 datadir = "../data/"
@@ -19,6 +23,10 @@ labels = df_train['polarity'].values
 val_texts = df_val['text'].values
 val_labels = df_val['polarity'].values
 
+
+
+#### Mise en forme y ----------------------------------------------- ####
+
 #Binarisation de nos variables à expliquer (les labels)
 label_binarizer = LabelBinarizer()
 y_train = label_binarizer.fit_transform(labels)
@@ -29,9 +37,7 @@ labelset = label_binarizer.classes_
 
 
 
-#### Modèle de référence ----------------------------------------------- ####
-import spacy
-from sklearn.feature_extraction.text import CountVectorizer
+#### Mise en forme x ----------------------------------------------- ####
 
 #Importation de trucs sur le Français (je ne sais pas encore exactement quoi)
 nlp = spacy.load('fr')
@@ -42,28 +48,42 @@ def mytokenize(text):
     tokens = [t.text.lower() for sent in doc.sents for t in sent if t.pos_ != "PUNCT" ]
     return tokens
 
+#stopwords
+#my_stop_words = text.FRENCH_STOP_WORDS.union(texts)
+
 #Vectorisation (BOW)
 vectorizer = CountVectorizer(
     max_features=8000,
-    strip_accents=None,
     analyzer="word",
     tokenizer=mytokenize,
     stop_words=None,
-    ngram_range=(1, 2),
-    binary=False,
-    preprocessor=None
+    ngram_range=(1, 2)
         )
+
+#Vectorisation (tf-idf)
+vectorizer = TfidfVectorizer(
+    max_features=8000,
+    analyzer="word",
+    tokenizer=mytokenize,
+    stop_words=None,
+    ngram_range=(1, 1)
+        )
+
+#Vectorisation (tf-idf et n_grames)
+vectorizer = TfidfVectorizer(
+    max_features=5000,
+    analyzer="word",
+    #tokenizer=mytokenize,
+    stop_words=None,
+    ngram_range=(1, 2)
+        )
+
 
 vectorizer.fit(texts)
 x_train = vectorizer.transform(texts)
 x_test = vectorizer.transform(val_texts)
 
 #### Modèle Keras ----------------------------------------------- ####
-
-####Tuto
-from keras import layers
-from keras.models import Sequential
-from keras.callbacks import EarlyStopping
 
 #Définition du nombre de neurones dans la couche d'entrée du réseau de neuronnes
 input_dim = x_train.shape[1] #Nombres de mots distincts en tout
@@ -74,7 +94,7 @@ model.add(layers.Dense(units=10, input_dim=input_dim, activation='relu')) #Ajout
 model.add(layers.Dense(units=3, activation='sigmoid'))
 
 #Configuration du processus d'apprentissage
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 #Summary de notre modèle (avant de l'entraîner)
 model.summary()

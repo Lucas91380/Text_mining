@@ -3,6 +3,8 @@
 #### Exam
 from datatools import load_dataset
 from sklearn.preprocessing import LabelBinarizer
+from keras.preprocessing.text import Tokenizer
+from keras.preprocessing.sequence import pad_sequences
 
 #Chemin des données
 datadir = "../data/"
@@ -19,6 +21,20 @@ labels = df_train['polarity'].values
 val_texts = df_val['text'].values
 val_labels = df_val['polarity'].values
 
+#Tokenisation de nos données explicatives
+tokenizer = Tokenizer(num_words=8000)
+tokenizer.fit_on_texts(texts)
+x_train = tokenizer.texts_to_sequences(texts)
+x_test = tokenizer.texts_to_sequences(val_texts)
+
+#Taille du vocabulaire
+vocab_size = len(tokenizer.word_index) + 1
+
+#On remplit de 0 les vecteurs tokenizés pour chaque phrase avoir des vecteurs de tailles identiques
+maxlen = 100
+x_train = pad_sequences(x_train, padding='post', maxlen=maxlen)
+x_test = pad_sequences(x_test, padding='post', maxlen=maxlen)
+
 #Binarisation de nos variables à expliquer (les labels)
 label_binarizer = LabelBinarizer()
 y_train = label_binarizer.fit_transform(labels)
@@ -28,36 +44,6 @@ y_test = label_binarizer.fit_transform(val_labels)
 labelset = label_binarizer.classes_
 
 
-
-#### Modèle de référence ----------------------------------------------- ####
-import spacy
-from sklearn.feature_extraction.text import CountVectorizer
-
-#Importation de trucs sur le Français (je ne sais pas encore exactement quoi)
-nlp = spacy.load('fr')
-
-#Création du tokenizer
-def mytokenize(text):
-    doc = nlp(text)
-    tokens = [t.text.lower() for sent in doc.sents for t in sent if t.pos_ != "PUNCT" ]
-    return tokens
-
-#Vectorisation (BOW)
-vectorizer = CountVectorizer(
-    max_features=8000,
-    strip_accents=None,
-    analyzer="word",
-    tokenizer=mytokenize,
-    stop_words=None,
-    ngram_range=(1, 2),
-    binary=False,
-    preprocessor=None
-        )
-
-vectorizer.fit(texts)
-x_train = vectorizer.transform(texts)
-x_test = vectorizer.transform(val_texts)
-
 #### Modèle Keras ----------------------------------------------- ####
 
 ####Tuto
@@ -65,16 +51,19 @@ from keras import layers
 from keras.models import Sequential
 from keras.callbacks import EarlyStopping
 
-#Définition du nombre de neurones dans la couche d'entrée du réseau de neuronnes
-input_dim = x_train.shape[1] #Nombres de mots distincts en tout
+#Taille de la sortie de la couche d'embedding
+embedding_dim = 50
 
 #Définition du modèle
 model = Sequential()
-model.add(layers.Dense(units=10, input_dim=input_dim, activation='relu')) #Ajout d'une couche
+model.add(layers.Embedding(input_dim=vocab_size, output_dim=embedding_dim, input_length=maxlen))
+model.add(layers.Conv1D(filters=128, kernel_size=5, activation='relu'))
+model.add(layers.GlobalMaxPool1D())
+model.add(layers.Dense(units=10, activation='relu'))
 model.add(layers.Dense(units=3, activation='sigmoid'))
 
 #Configuration du processus d'apprentissage
-model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
 #Summary de notre modèle (avant de l'entraîner)
 model.summary()
@@ -85,10 +74,9 @@ early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verb
 my_callbacks.append(early_stopping)
 
 #Apprentissage du modèle
-history = model.fit(x_train, y_train, epochs=50, verbose=False, callbacks=my_callbacks, validation_data=(x_test, y_test), batch_size=16)
+history = model.fit(x_train, y_train, epochs=20, callbacks=my_callbacks, verbose=False, validation_data=(x_test, y_test), batch_size=16)
 
 ###Qualité du modèle
-
 #Accuracy
 loss, accuracy = model.evaluate(x_train, y_train, verbose=False)
 print("Training accuracy: {:.4f}".format(accuracy))
@@ -126,7 +114,8 @@ Plot_history(history)
 items = load_dataset(valfile)
 
 #Valeurs prédites
-X = vectorizer.transform(items['text'])
+X = tokenizer.texts_to_sequences(items['text'])
+X = pad_sequences(X, padding='post', maxlen=maxlen)
 Y = model.predict(X)
 slabels = label_binarizer.inverse_transform(Y)
 
