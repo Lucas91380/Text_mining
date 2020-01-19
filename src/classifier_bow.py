@@ -4,16 +4,13 @@ np.random.seed(15)
 import spacy
 from datatools import load_dataset
 from sklearn.preprocessing import LabelBinarizer
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
 from keras import layers
 from keras.models import Sequential
 from keras.callbacks import EarlyStopping
 
 
 nlp = spacy.load('fr')
-
-#embfile = "../resources/frWac_non_lem_no_postag_no_phrase_200_skip_cut100.bin"
-# wv : kv = kv.load_word2vec_format(embfile, binary=True, encoding='UTF-8', unicode_errors='ignore')
 
 
 class Classifier:
@@ -23,17 +20,17 @@ class Classifier:
         self.labelset = None
         self.label_binarizer = LabelBinarizer()
         self.model = None
-        self.epochs = 25
-        self.batchsize = 16
-        self.max_features = 8000
+        self.epochs = 50
+        self.batchsize = 64
+        self.max_features = 27000
         # create the vectorizer
-        self.vectorizer = CountVectorizer(
+        self.vectorizer = TfidfVectorizer(
             max_features=self.max_features,
             strip_accents=None,
             analyzer="word",
             tokenizer=self.mytokenize,
             stop_words=None,
-            ngram_range=(1, 2),
+            ngram_range=(1, 4),
             binary=False,
             preprocessor=None
         )
@@ -60,11 +57,11 @@ class Classifier:
 
         #Définition du modèle
         model = Sequential()
-        model.add(layers.Dense(units=10, input_dim=input_dim, activation='relu')) #Ajout d'une couche
-        model.add(layers.Dense(units=3, activation='sigmoid'))
+        model.add(layers.Dense(units=128, input_dim=input_dim, activation='relu')) #Ajout d'une couche
+        model.add(layers.Dense(units=3, activation='softmax'))
 
         #Configuration du processus d'apprentissage
-        model.compile(loss='binary_crossentropy', optimizer='adam', metrics=['accuracy'])
+        model.compile(loss='categorical_crossentropy', optimizer='adam', metrics=['accuracy'])
 
         #Summary de notre modèle (avant de l'entraîner)
         model.summary()
@@ -93,7 +90,7 @@ class Classifier:
         X_train = self.vectorize(texts)
         #
         my_callbacks = []
-        early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=3, verbose=0, mode='auto', baseline=None)
+        early_stopping = EarlyStopping(monitor='val_loss', min_delta=0, patience=2, verbose=0, mode='auto', baseline=None)
         my_callbacks.append(early_stopping)
         if valtexts is not None and vallabels is not None:
             X_val = self.vectorize(valtexts)

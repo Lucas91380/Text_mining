@@ -71,11 +71,11 @@ vectorizer = TfidfVectorizer(
 
 #Vectorisation (tf-idf et n_grames)
 vectorizer = TfidfVectorizer(
-    max_features=5000,
+    max_features=25000,
     analyzer="word",
-    #tokenizer=mytokenize,
+    tokenizer=mytokenize,
     stop_words=None,
-    ngram_range=(1, 2)
+    ngram_range=(1, 3)
         )
 
 
@@ -90,7 +90,7 @@ input_dim = x_train.shape[1] #Nombres de mots distincts en tout
 
 #Définition du modèle
 model = Sequential()
-model.add(layers.Dense(units=10, input_dim=input_dim, activation='relu')) #Ajout d'une couche
+model.add(layers.Dense(units=128, input_dim=input_dim, activation='relu')) #Ajout d'une couche
 model.add(layers.Dense(units=3, activation='sigmoid'))
 
 #Configuration du processus d'apprentissage
